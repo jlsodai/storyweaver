@@ -5,7 +5,10 @@ const nextConfig = {
   },
   images: { unoptimized: true },
   experimental: {
-    serverActions: true,
+    serverActions: {
+      // Add any serverActions specific configurations here
+      allowedOrigins: [], // Example configuration
+    },
     optimizePackageImports: ['@radix-ui/react-*'],
   },
   webpack: (config) => {
