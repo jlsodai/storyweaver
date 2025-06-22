@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     // Poll for completion
     let runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
     
-    while (runStatus.status === 'running' || runStatus.status === 'queued') {
+    while ((runStatus.status as string) === 'running' || (runStatus.status as string) === 'queued') {
       await new Promise(resolve => setTimeout(resolve, 1000));
       runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
     }
