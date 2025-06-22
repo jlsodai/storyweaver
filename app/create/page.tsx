@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { BookOpen, Send, ArrowLeft, Loader2, Sparkles } from "lucide-react";
 import Link from "next/link";
+import ReactMarkdown from "react-markdown";
 
 interface Message {
   id: string;
@@ -344,17 +345,8 @@ export default function CreateStory() {
                 </p>
               </div>
 
-              <div className="prose prose-lg max-w-none">
-                <div className="story-text font-playful text-gray-800 leading-relaxed">
-                  {currentStory.split("\n").map(
-                    (paragraph, index) =>
-                      paragraph.trim() && (
-                        <p key={index} className="mb-4">
-                          {paragraph}
-                        </p>
-                      )
-                  )}
-                </div>
+              <div className="story-text font-playful text-gray-800 leading-relaxed prose prose-lg max-w-none">
+                <ReactMarkdown>{currentStory || ""}</ReactMarkdown>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 mt-8 pt-8 border-t border-purple-100">
