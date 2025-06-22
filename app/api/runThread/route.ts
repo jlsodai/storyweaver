@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
   
       // Step 2: Poll for completion
       let runStatus;
-      const maxTries = 20;
+      const maxTries = 50;
       let tries = 0;
   
       do {
@@ -124,9 +124,23 @@ export async function POST(request: NextRequest) {
     }
   
     // Step 3: Extract story starting at "Once upon a time" (if present)
-    const storyStartIndex = storyText.toLowerCase().indexOf("once upon a time");
-    if (storyStartIndex !== -1) {
-      storyText = storyText.substring(storyStartIndex).trim();
+    // const storyStartIndex = storyText.toLowerCase().indexOf("once upon a time");
+    // if (storyStartIndex !== -1) {
+    //   storyText = storyText.substring(storyStartIndex).trim();
+    // }
+
+    const storyStartTag = '[STORY_START]';
+    const storyEndTag = '[STORY_END]';
+    const startIdx = storyText.indexOf(storyStartTag);
+    const endIdx = storyText.indexOf(storyEndTag);
+    if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+      storyText = storyText.substring(startIdx + storyStartTag.length, endIdx).trim();
+    } else {
+      // Fallback to "Once upon a time" logic
+      const storyStartIndex = storyText.toLowerCase().indexOf("once upon a time");
+      if (storyStartIndex !== -1) {
+        storyText = storyText.substring(storyStartIndex).trim();
+      }
     }
   
     // Step 4: Remove trailing --- if left behind
@@ -135,11 +149,13 @@ export async function POST(request: NextRequest) {
     if (storyData) {
       storyData.storyText = storyText;
     }
+
+    // console.log("Extracted story data:", { storyText, storyData });
   
     return {
       success: !!storyText,
       message: messageText,
-      isComplete: messageText.includes("[STORY_COMPLETE]"),
+      isComplete: messageText.includes("[STORY_START]"),
       storyData,
     };
   }

@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
             assistant_id: process.env.OPENAI_ASSISTANT_ID!
         });
 
-        console.log('Run started:', run);
+        // console.log('Run started:', run);
         return NextResponse.json({ success: true, run });
     } catch (error) {
         console.error('Error creating and running thread:', error);
