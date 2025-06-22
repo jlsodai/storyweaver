@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { BookOpen, Send, ArrowLeft, Loader2, Sparkles } from 'lucide-react';
-import Link from 'next/link';
+import { useState, useRef, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { BookOpen, Send, ArrowLeft, Loader2, Sparkles } from "lucide-react";
+import Link from "next/link";
 
 interface Message {
   id: string;
-  type: 'user' | 'assistant' | 'system';
+  type: "user" | "assistant" | "system";
   content: string;
   timestamp: Date;
 }
@@ -27,15 +28,21 @@ interface StoryData {
 }
 
 export default function CreateStory() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const threadIdParam = searchParams.get("thread_id");
+
+  const [threadId, setThreadId] = useState<string | null>(threadIdParam);
   const [messages, setMessages] = useState<Message[]>([
     {
-      id: '1',
-      type: 'assistant',
-      content: "Hello! I'm so excited to help you create a magical story for your child! ✨ To get started, could you tell me your child's name and age?",
-      timestamp: new Date()
-    }
+      id: "1",
+      type: "assistant",
+      content:
+        "Hello! I'm so excited to help you create a magical story for your child! ✨ To get started, could you tell me your child's name and age?",
+      timestamp: new Date(),
+    },
   ]);
-  const [inputValue, setInputValue] = useState('');
+  const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [currentStory, setCurrentStory] = useState<string | null>(null);
@@ -43,8 +50,41 @@ export default function CreateStory() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // On mount, if no threadId, create one and update the route
+  useEffect(() => {
+    if (!threadId) {
+      const createThread = async () => {
+        setIsLoading(true);
+        try {
+          const res = await fetch("/api/createThread", { method: "POST" });
+          const data = await res.json();
+          if (data.run?.thread_id) {
+            setThreadId(data.run.thread_id);
+            // Update the route with thread_id as a query param
+            router.replace(`/create?thread_id=${data.run.thread_id}`);
+          }
+        } catch (e) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: Date.now().toString(),
+              type: "assistant",
+              content:
+                "Sorry, I couldn't start a new story thread. Please refresh and try again.",
+              timestamp: new Date(),
+            },
+          ]);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      createThread();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
@@ -52,77 +92,72 @@ export default function CreateStory() {
   }, [messages, isTyping]);
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || isLoading) return;
+    if (!inputValue.trim() || isLoading || !threadId) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      type: 'user',
+      type: "user",
       content: inputValue.trim(),
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
-    setInputValue('');
+    setMessages((prev) => [...prev, userMessage]);
+    setInputValue("");
     setIsLoading(true);
     setIsTyping(true);
 
     try {
-      // Simulate API delay for realistic feel
-      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
-      
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      // Call /api/runThread with thread_id and message
+      const response = await fetch("/api/runThread", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [...messages, userMessage],
-          storyData
-        })
+          thread_id: threadId,
+          message: userMessage.content,
+        }),
       });
 
-      console.log(response);
+      if (!response.ok) throw new Error("Failed to get response");
 
-      if (!response.ok) throw new Error('Failed to get response');
-      
       const data = await response.json();
 
-      console.log(data);
-      
       setIsTyping(false);
-      
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        type: 'assistant',
-        content: data.message,
-        timestamp: new Date()
-      };
 
-      setMessages(prev => [...prev, assistantMessage]);
-      
-      if (data.storyData) {
-        setStoryData(prev => ({ ...prev, ...data.storyData }));
-      }
-      
       if (data.story) {
         setCurrentStory(data.story);
       }
-    } catch (error) {
-      console.log("Error message will be displayed here")
-      console.log(error);
-      setIsTyping(false);
-      const errorMessage: Message = {
+
+      const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
-        type: 'assistant',
-        content: "I'm sorry, I'm having trouble connecting right now. Could you please try again?",
-        timestamp: new Date()
+        type: "assistant",
+        content: data.message || data.story || "Here's your story!",
+        timestamp: new Date(),
       };
-      setMessages(prev => [...prev, errorMessage]);
+
+      setMessages((prev) => [...prev, assistantMessage]);
+
+      if (data.storyData) {
+        setStoryData((prev) => ({ ...prev, ...data.storyData }));
+      }
+    } catch (error) {
+      setIsTyping(false);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          type: "assistant",
+          content:
+            "I'm sorry, I'm having trouble connecting right now. Could you please try again?",
+          timestamp: new Date(),
+        },
+      ]);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
@@ -136,7 +171,11 @@ export default function CreateStory() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Link href="/">
-                <Button variant="ghost" size="sm" className="text-purple-700 hover:bg-purple-50">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-purple-700 hover:bg-purple-50"
+                >
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Back
                 </Button>
@@ -145,7 +184,9 @@ export default function CreateStory() {
                 <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
                   <BookOpen className="w-4 h-4 text-white" />
                 </div>
-                <h1 className="text-xl font-playful font-bold text-gray-800">Story Creator</h1>
+                <h1 className="text-xl font-playful font-bold text-gray-800">
+                  Story Creator
+                </h1>
               </div>
             </div>
             {storyData.childName && (
@@ -160,30 +201,38 @@ export default function CreateStory() {
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {!currentStory ? (
           /* Chat Interface */
-          <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg h-[600px] flex flex-col">
+          <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg h-[600px] flex flex-col overflow-y-auto">
             <CardContent className="flex-1 flex flex-col p-0">
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              <div
+                className="flex-1 p-6 space-y-4 overflow-y-auto"
+                style={{ minHeight: 0 }}
+              >
                 {messages.map((message) => (
                   <div
                     key={message.id}
-                    className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                    className={`flex ${
+                      message.type === "user" ? "justify-end" : "justify-start"
+                    }`}
                   >
                     <div
                       className={`max-w-[80%] rounded-2xl p-4 ${
-                        message.type === 'user'
-                          ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
-                          : 'bg-white border border-purple-100 text-gray-800'
+                        message.type === "user"
+                          ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+                          : "bg-white border border-purple-100 text-gray-800"
                       }`}
                     >
                       <p className="leading-relaxed">{message.content}</p>
                       <div className="text-xs opacity-70 mt-2">
-                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {message.timestamp.toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
                       </div>
                     </div>
                   </div>
                 ))}
-                
+
                 {isTyping && (
                   <div className="flex justify-start">
                     <div className="bg-white border border-purple-100 rounded-2xl p-4 text-gray-800">
@@ -195,12 +244,12 @@ export default function CreateStory() {
                     </div>
                   </div>
                 )}
-                
+
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Input Area */}
-              <div className="border-t border-purple-100 p-6">
+              {/* Input Area fixed to bottom */}
+              <div className="border-t border-purple-100 p-6 sticky bottom-0 bg-white/70 backdrop-blur-sm z-10">
                 <div className="flex space-x-4">
                   <Input
                     ref={inputRef}
@@ -209,11 +258,16 @@ export default function CreateStory() {
                     onKeyPress={handleKeyPress}
                     placeholder="Type your message..."
                     className="flex-1 border-purple-200 focus:border-purple-500 rounded-xl"
-                    disabled={isLoading}
+                    disabled={isLoading || !!currentStory || !threadId}
                   />
                   <Button
                     onClick={handleSendMessage}
-                    disabled={!inputValue.trim() || isLoading}
+                    disabled={
+                      !inputValue.trim() ||
+                      isLoading ||
+                      !!currentStory ||
+                      !threadId
+                    }
                     className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl px-6"
                   >
                     {isLoading ? (
@@ -236,35 +290,41 @@ export default function CreateStory() {
                   <span className="font-medium">Your Story is Ready!</span>
                 </div>
                 <h2 className="text-3xl font-playful font-bold text-gray-800 mb-2">
-                  {storyData.childName}'s Adventure
+                  {storyData.childName
+                    ? `${storyData.childName}'s Adventure`
+                    : "Your Story"}
                 </h2>
-                <p className="text-gray-600">A personalized story just for them</p>
+                <p className="text-gray-600">
+                  A personalized story just for them
+                </p>
               </div>
-              
+
               <div className="prose prose-lg max-w-none">
                 <div className="story-text font-playful text-gray-800 leading-relaxed">
-                  {currentStory.split('\n').map((paragraph, index) => (
-                    paragraph.trim() && (
-                      <p key={index} className="mb-4">
-                        {paragraph}
-                      </p>
-                    )
-                  ))}
+                  {currentStory.split("\n").map(
+                    (paragraph, index) =>
+                      paragraph.trim() && (
+                        <p key={index} className="mb-4">
+                          {paragraph}
+                        </p>
+                      )
+                  )}
                 </div>
               </div>
-              
+
               <div className="flex flex-col sm:flex-row gap-4 mt-8 pt-8 border-t border-purple-100">
                 <Button
                   onClick={() => {
                     setCurrentStory(null);
-                    setMessages(prev => [
+                    setMessages((prev) => [
                       ...prev,
                       {
                         id: Date.now().toString(),
-                        type: 'assistant',
-                        content: "That was a wonderful story! Would you like to create another story or modify this one? I'm here to help! ✨",
-                        timestamp: new Date()
-                      }
+                        type: "assistant",
+                        content:
+                          "That was a wonderful story! Would you like to create another story or modify this one? I'm here to help! ✨",
+                        timestamp: new Date(),
+                      },
                     ]);
                   }}
                   className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-playful font-semibold rounded-xl"
@@ -272,7 +332,10 @@ export default function CreateStory() {
                   <Sparkles className="w-4 h-4 mr-2" />
                   Create Another Story
                 </Button>
-                <Button variant="outline" className="border-purple-200 text-purple-700 hover:bg-purple-50 font-playful font-semibold rounded-xl">
+                <Button
+                  variant="outline"
+                  className="border-purple-200 text-purple-700 hover:bg-purple-50 font-playful font-semibold rounded-xl"
+                >
                   <BookOpen className="w-4 h-4 mr-2" />
                   Save Story
                 </Button>
