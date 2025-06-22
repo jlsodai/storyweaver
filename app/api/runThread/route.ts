@@ -21,7 +21,8 @@ export async function POST(request: NextRequest) {
       // If get_history is true, return all previous messages for this thread
       if (get_history) {
         const messagesResponse = await openai.beta.threads.messages.list(thread_id);
-        const messages = messagesResponse.data.map((msg: any, idx: number) => {
+        // Reverse the messages so oldest is first, newest is last
+        const messages = messagesResponse.data.slice().reverse().map((msg: any, idx: number) => {
           let content = '';
           if (msg.content && Array.isArray(msg.content) && msg.content[0]?.type === 'text') {
             content = msg.content[0].text.value;
