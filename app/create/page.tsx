@@ -83,6 +83,53 @@ export default function CreateStory() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (threadId) {
+      // Fetch previous messages for this thread
+      const fetchHistory = async () => {
+        setIsLoading(true);
+        try {
+          const res = await fetch(`/api/runThread`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ thread_id: threadId, get_history: true }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (Array.isArray(data.history)) {
+              setMessages(
+                data.history.map((msg: any, idx: number) => ({
+                  id: msg.id || String(idx + 1),
+                  type: msg.type || "assistant",
+                  content: msg.content,
+                  timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date(),
+                }))
+              );
+              // If the last message contains a story, show it
+              const lastStory = data.history.find((msg: any) => msg.story);
+              if (lastStory && lastStory.story) {
+                setCurrentStory(lastStory.story);
+              }
+              // If the last message contains storyData, set it
+              const lastStoryData = data.history.find(
+                (msg: any) => msg.storyData
+              );
+              if (lastStoryData && lastStoryData.storyData) {
+                setStoryData((prev) => ({ ...prev, ...lastStoryData.storyData }));
+              }
+            }
+          }
+        } catch (e) {
+          // Ignore history fetch errors
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      fetchHistory();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [threadId]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -211,16 +258,14 @@ export default function CreateStory() {
                 {messages.map((message) => (
                   <div
                     key={message.id}
-                    className={`flex ${
-                      message.type === "user" ? "justify-end" : "justify-start"
-                    }`}
+                    className={`flex ${message.type === "user" ? "justify-end" : "justify-start"
+                      }`}
                   >
                     <div
-                      className={`max-w-[80%] rounded-2xl p-4 ${
-                        message.type === "user"
-                          ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
-                          : "bg-white border border-purple-100 text-gray-800"
-                      }`}
+                      className={`max-w-[80%] rounded-2xl p-4 ${message.type === "user"
+                        ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+                        : "bg-white border border-purple-100 text-gray-800"
+                        }`}
                     >
                       <p className="leading-relaxed">{message.content}</p>
                       <div className="text-xs opacity-70 mt-2">
