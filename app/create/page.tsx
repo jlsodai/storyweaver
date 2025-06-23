@@ -8,17 +8,9 @@ import { Input } from "@/components/ui/input";
 import { BookOpen, Send, ArrowLeft, Loader2, Sparkles } from "lucide-react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
-
-interface Message {
-  id: string;
-  type: "user" | "assistant" | "system";
-  content: string;
-  timestamp: Date;
-}
-
-interface StoryData {
-  childName?: string;
-}
+import CompleteStory from "@/components/story/complete-story";
+import { Message, StoryData } from "@/lib/types";
+import StoryHeader from "@/components/story/story-header";
 
 export default function CreateStory() {
   const router = useRouter();
@@ -35,6 +27,7 @@ export default function CreateStory() {
       timestamp: new Date(),
     },
   ]);
+
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
@@ -206,37 +199,7 @@ export default function CreateStory() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50">
       {/* Header */}
-      <header className="bg-white/70 backdrop-blur-sm border-b border-purple-100 sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Link href="/">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-purple-700 hover:bg-purple-50"
-                >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back
-                </Button>
-              </Link>
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-                  <BookOpen className="w-4 h-4 text-white" />
-                </div>
-                <h1 className="text-xl font-playful font-bold text-gray-800">
-                  Story Creator
-                </h1>
-              </div>
-            </div>
-            {storyData.childName && (
-              <div className="text-sm text-purple-700 font-medium">
-                Creating a story for {storyData.childName}
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
+      <StoryHeader storyData={storyData} />
 
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {!currentStory ? (
@@ -320,57 +283,7 @@ export default function CreateStory() {
           </Card>
         ) : (
           /* Story Display */
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-            <CardContent className="p-8">
-              <div className="text-center mb-8">
-                <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full px-4 py-2 mb-4">
-                  <Sparkles className="w-4 h-4" />
-                  <span className="font-medium">Your Story is Ready!</span>
-                </div>
-                <h2 className="text-3xl font-playful font-bold text-gray-800 mb-2">
-                  {storyData.childName
-                    ? `${storyData.childName}'s Adventure`
-                    : "Your Story"}
-                </h2>
-                <p className="text-gray-600">
-                  A personalized story just for them
-                </p>
-              </div>
-
-              <div className="story-text font-playful text-gray-800 leading-relaxed prose prose-lg max-w-none">
-                <ReactMarkdown>{currentStory || ""}</ReactMarkdown>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-4 mt-8 pt-8 border-t border-purple-100">
-                <Button
-                  onClick={() => {
-                    setCurrentStory(null);
-                    setMessages((prev) => [
-                      ...prev,
-                      {
-                        id: Date.now().toString(),
-                        type: "assistant",
-                        content:
-                          "That was a wonderful story! Would you like to create another story or modify this one? I'm here to help! ✨",
-                        timestamp: new Date(),
-                      },
-                    ]);
-                  }}
-                  className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-playful font-semibold rounded-xl"
-                >
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Create Another Story
-                </Button>
-                <Button
-                  variant="outline"
-                  className="border-purple-200 text-purple-700 hover:bg-purple-50 font-playful font-semibold rounded-xl"
-                >
-                  <BookOpen className="w-4 h-4 mr-2" />
-                  Save Story
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <CompleteStory storyData={storyData} currentStory={currentStory} setCurrentStory={setCurrentStory} setMessages={setMessages} />
         )}
       </div>
     </div>
