@@ -18,14 +18,6 @@ interface Message {
 
 interface StoryData {
   childName?: string;
-  childAge?: number;
-  mainCharacter?: string;
-  setting?: string;
-  storyType?: string;
-  moralLesson?: string;
-  interests?: string[];
-  otherCharacters?: string[];
-  storyLength?: string;
 }
 
 export default function CreateStory() {
