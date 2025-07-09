@@ -2,15 +2,10 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { BookOpen, Send, ArrowLeft, Loader2, Sparkles } from "lucide-react";
-import Link from "next/link";
-import ReactMarkdown from "react-markdown";
 import CompleteStory from "@/components/story/complete-story";
 import { Message, StoryData } from "@/lib/types";
 import StoryHeader from "@/components/story/story-header";
+import ChatInterface from "@/components/story/chat-interface";
 
 export default function CreateStory() {
   const router = useRouter();
@@ -204,83 +199,19 @@ export default function CreateStory() {
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {!currentStory ? (
           /* Chat Interface */
-          <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg h-[600px] flex flex-col overflow-y-auto">
-            <CardContent className="flex-1 flex flex-col p-0">
-              {/* Messages */}
-              <div
-                className="flex-1 p-6 space-y-4 overflow-y-auto"
-                style={{ minHeight: 0 }}
-              >
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${message.type === "user" ? "justify-end" : "justify-start"
-                      }`}
-                  >
-                    <div
-                      className={`max-w-[80%] rounded-2xl p-4 ${message.type === "user"
-                        ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
-                        : "bg-white border border-purple-100 text-gray-800"
-                        }`}
-                    >
-                      <p className="leading-relaxed">{message.content}</p>
-                      <div className="text-xs opacity-70 mt-2">
-                        {message.timestamp.toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                {isTyping && (
-                  <div className="flex justify-start">
-                    <div className="bg-white border border-purple-100 rounded-2xl p-4 text-gray-800">
-                      <div className="flex space-x-1">
-                        <div className="typing-indicator"></div>
-                        <div className="typing-indicator"></div>
-                        <div className="typing-indicator"></div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div ref={messagesEndRef} />
-              </div>
-
-              {/* Input Area fixed to bottom */}
-              <div className="border-t border-purple-100 p-6 sticky bottom-0 bg-white/70 backdrop-blur-sm z-10">
-                <div className="flex space-x-4">
-                  <Input
-                    ref={inputRef}
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Type your message..."
-                    className="flex-1 border-purple-200 focus:border-purple-500 rounded-xl"
-                    disabled={isLoading || !!currentStory || !threadId}
-                  />
-                  <Button
-                    onClick={handleSendMessage}
-                    disabled={
-                      !inputValue.trim() ||
-                      isLoading ||
-                      !!currentStory ||
-                      !threadId
-                    }
-                    className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl px-6"
-                  >
-                    {isLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Send className="w-4 h-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <ChatInterface
+            messages={messages}
+            isTyping={isTyping}
+            inputValue={inputValue}
+            setInputValue={setInputValue}
+            isLoading={isLoading}
+            threadId={threadId}
+            currentStory={currentStory}
+            handleSendMessage={handleSendMessage}
+            handleKeyPress={handleKeyPress}
+            messagesEndRef={messagesEndRef}
+            inputRef={inputRef}
+          />
         ) : (
           /* Story Display */
           <CompleteStory storyData={storyData} currentStory={currentStory} setCurrentStory={setCurrentStory} setMessages={setMessages} />
